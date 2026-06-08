@@ -2,7 +2,6 @@
 session_start();
 include("../config/db.php");
 
-// Only students can access
 if(!isset($_SESSION['user_id']) || $_SESSION['role'] != 'student'){
     header("Location: ../auth/login.php");
     exit();
@@ -10,12 +9,11 @@ if(!isset($_SESSION['user_id']) || $_SESSION['role'] != 'student'){
 
 $student_id = $_SESSION['user_id'];
 
-// Fetch all scholarships
 $scholarships = mysqli_query($conn, "SELECT * FROM scholarships");
 
-// Fetch IDs of scholarships the student has already applied to
 $applied = mysqli_query($conn, "SELECT scholarship_id FROM applications WHERE user_id='$student_id'");
 $applied_ids = [];
+
 while($row = mysqli_fetch_assoc($applied)){
     $applied_ids[] = $row['scholarship_id'];
 }
@@ -25,71 +23,247 @@ while($row = mysqli_fetch_assoc($applied)){
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Available Scholarships | EduFund</title>
+<title>Scholarships | SoundsOfScholars</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
 <style>
-body {font-family: Arial; margin:0; background-color:#f4f6f8;}
-.sidebar {position: fixed; left:0; top:0; height:100%; width:220px; background-color:#2980b9; color:white; padding-top:60px;}
-.sidebar a {display:block; color:white; padding:15px 20px; text-decoration:none; font-weight:bold;}
-.sidebar a:hover {background-color:#1f6391;}
-header {background-color:#2980b9; color:white; position: fixed; top:0; left:220px; right:0; height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 20px;}
-header h1 {margin:0; font-size:22px;}
-header a {color:white; text-decoration:none; background-color:#e67e22; padding:8px 15px; border-radius:5px;}
-header a:hover {background-color:#cf711f;}
-.main {margin-left:220px; padding:20px; margin-top:60px;}
-h2 {color:#2980b9;}
-table {width:100%; border-collapse: collapse; margin-top:20px;}
-th, td {border:1px solid #ccc; padding:10px; text-align:left;}
-th {background-color:#2980b9; color:white;}
-.action-btn {padding:5px 10px; border:none; border-radius:3px; cursor:pointer;}
-.apply {background-color:#27ae60; color:white;}
-.apply:hover {background-color:#1e8449;}
-.applied {background-color:#95a5a6; color:white; cursor:default;}
+:root {
+    --blue-900:#042C53;
+    --blue-800:#0C447C;
+    --blue-600:#185FA5;
+    --blue-50:#E6F1FB;
+    --amber-200:#EF9F27;
+    --gray-100:#D3D1C7;
+}
+
+* {
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'DM Sans', sans-serif;
+}
+
+/* TOP BAR */
+.topbar {
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    height:64px;
+    background:var(--blue-900);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 24px;
+    color:white;
+    z-index:1000;
+}
+
+.topbar h1 {
+    font-family:'Playfair Display', serif;
+    font-size:18px;
+}
+
+/* SIDEBAR */
+.sidebar {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    bottom: 0;
+    width: 230px;
+    background: var(--blue-900);
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.brand {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:white;
+    font-family:'Playfair Display', serif;
+    margin-bottom:20px;
+    padding:10px;
+}
+
+.brand .dot {
+    width:10px;
+    height:10px;
+    background:var(--amber-200);
+    border-radius:50%;
+}
+
+.sidebar a {
+    color:rgba(255,255,255,0.75);
+    text-decoration:none;
+    padding:10px 12px;
+    border-radius:8px;
+    font-size:14px;
+}
+
+.sidebar a:hover {
+    background:rgba(255,255,255,0.08);
+    color:white;
+}
+
+.sidebar a.active {
+    background:var(--amber-200);
+    color:var(--blue-900);
+    font-weight:600;
+}
+
+/* MAIN */
+.container {
+    margin-top:80px;
+    margin-left:250px;
+    padding:24px;
+}
+
+/* TITLE */
+h2 {
+    font-family:'Playfair Display', serif;
+    color:var(--blue-900);
+    margin-bottom:20px;
+}
+
+/* GRID CARDS */
+.grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+    gap:16px;
+}
+
+/* CARD */
+.card {
+    background:white;
+    border-radius:14px;
+    padding:20px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.06);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    border-left:4px solid var(--blue-600);
+}
+
+.card h3 {
+    font-size:16px;
+    color:var(--blue-900);
+}
+
+.card p {
+    font-size:14px;
+    color:#666;
+    line-height:1.5;
+}
+
+/* META */
+.meta {
+    font-size:13px;
+    color:#555;
+}
+
+/* BUTTONS */
+.btn {
+    display:inline-block;
+    padding:10px 12px;
+    border-radius:8px;
+    text-align:center;
+    font-size:14px;
+    font-weight:600;
+    text-decoration:none;
+    margin-top:auto;
+}
+
+.apply {
+    background:var(--amber-200);
+    color:var(--blue-900);
+}
+
+.apply:hover {
+    background:#f7b224;
+}
+
+.applied {
+    background:#d6d6d6;
+    color:#666;
+    cursor:not-allowed;
+}
+
+.badge {
+    display:inline-block;
+    padding:4px 10px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:600;
+    margin-top:5px;
+    width:fit-content;
+    background:var(--blue-50);
+    color:var(--blue-600);
+}
+
 </style>
 </head>
+
 <body>
 
-<div class="sidebar">
-    <h2 style="text-align:center; margin-bottom:20px;">Student Menu</h2>
-    <a href="dashboard.php">Dashboard</a>
-    <a href="profile.php">Profile</a>
-    <a href="scholarships.php">Available Scholarships</a>
-    <a href="my_applications.php">My Applications</a>
-    <a href="eligibility.php">Eligibility Criteria</a>
-    <a href="../auth/logout.php">Logout</a>
+<!-- TOP BAR -->
+<div class="topbar">
+    <h1>Available Scholarships</h1>
 </div>
 
-<header>
-    <h1>Available Scholarships</h1>
-</header>
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <div class="brand">
+        <div class="dot"></div>
+        <span>Student Portal</span>
+    </div>
 
-<div class="main">
+    <a href="dashboard.php">Dashboard</a>
+    <a href="profile.php">Profile</a>
+    <a href="scholarships.php" class="active">Scholarships</a>
+    <a href="my_applications.php">My Applications</a>
+    <a href="eligibility.php">Eligibility</a>
+</div>
+
+<!-- MAIN -->
+<div class="container">
+
     <h2>Scholarships</h2>
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Eligibility</th>
-            <th>Deadline</th>
-            <th>Action</th>
-        </tr>
-        <?php while($scholarship = mysqli_fetch_assoc($scholarships)){ ?>
-        <tr>
-            <td><?php echo $scholarship['id']; ?></td>
-            <td><?php echo $scholarship['title']; ?></td>
-            <td><?php echo $scholarship['description']; ?></td>
-            <td><?php echo $scholarship['eligibility']; ?></td>
-            <td><?php echo $scholarship['deadline']; ?></td>
-            <td>
-                <?php if(in_array($scholarship['id'], $applied_ids)){ ?>
-                    <button class="action-btn applied" disabled>Applied</button>
-                <?php } else { ?>
-                    <a href="apply.php?scholarship_id=<?php echo $scholarship['id']; ?>" class="action-btn apply">Apply</a>
-                <?php } ?>
-            </td>
-        </tr>
+
+    <div class="grid">
+
+        <?php while($s = mysqli_fetch_assoc($scholarships)){ ?>
+
+        <div class="card">
+
+            <h3><?php echo $s['title']; ?></h3>
+
+            <span class="badge">Deadline: <?php echo $s['deadline']; ?></span>
+
+            <p><?php echo $s['description']; ?></p>
+
+            <div class="meta">
+                <strong>Eligibility:</strong> <?php echo $s['eligibility']; ?>
+            </div>
+
+            <?php if(in_array($s['id'], $applied_ids)){ ?>
+                <div class="btn applied">Already Applied</div>
+            <?php } else { ?>
+                <a class="btn apply"
+                   href="apply.php?scholarship_id=<?php echo $s['id']; ?>">
+                   Apply Now
+                </a>
+            <?php } ?>
+
+        </div>
+
         <?php } ?>
-    </table>
+
+    </div>
+
 </div>
 
 </body>

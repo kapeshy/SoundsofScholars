@@ -2,13 +2,11 @@
 session_start();
 include("../config/db.php");
 
-// Only students can access
 if(!isset($_SESSION['user_id']) || $_SESSION['role'] != 'student'){
     header("Location: ../auth/login.php");
     exit();
 }
 
-// Fetch all scholarships
 $scholarships = mysqli_query($conn, "SELECT * FROM scholarships");
 ?>
 
@@ -16,57 +14,190 @@ $scholarships = mysqli_query($conn, "SELECT * FROM scholarships");
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Eligibility Criteria | EduFund</title>
+<title>Eligibility Criteria | SoundsOfScholars</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
 <style>
-body {font-family: Arial; margin:0; background-color:#f4f6f8;}
-.sidebar {position: fixed; left:0; top:0; height:100%; width:220px; background-color:#2980b9; color:white; padding-top:60px;}
-.sidebar a {display:block; color:white; padding:15px 20px; text-decoration:none; font-weight:bold;}
-.sidebar a:hover {background-color:#1f6391;}
-header {background-color:#2980b9; color:white; position: fixed; top:0; left:220px; right:0; height:60px; display:flex; justify-content:space-between; align-items:center; padding:0 20px;}
-header h1 {margin:0; font-size:22px;}
-header a {color:white; text-decoration:none; background-color:#e67e22; padding:8px 15px; border-radius:5px;}
-header a:hover {background-color:#cf711f;}
-.main {margin-left:220px; padding:20px; margin-top:60px;}
-h2 {color:#2980b9;}
-table {width:100%; border-collapse: collapse; margin-top:20px;}
-th, td {border:1px solid #ccc; padding:10px; text-align:left;}
-th {background-color:#2980b9; color:white;}
+:root{
+    --blue-900:#042C53;
+    --blue-800:#0C447C;
+    --blue-600:#185FA5;
+    --amber:#EF9F27;
+    --gray:#f4f6f8;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'DM Sans', sans-serif;
+}
+
+/* TOPBAR */
+.topbar{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    height:64px;
+    background:var(--blue-900);
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 24px;
+    z-index:1000;
+}
+
+.topbar h1{
+    font-family:'Playfair Display', serif;
+    font-size:18px;
+}
+
+/* SIDEBAR */
+.sidebar{
+    position:fixed;
+    top:64px;
+    left:0;
+    bottom:0;
+    width:230px;
+    background:var(--blue-900);
+    padding:20px 14px;
+}
+
+.sidebar a{
+    display:block;
+    color:rgba(255,255,255,0.75);
+    text-decoration:none;
+    padding:10px;
+    border-radius:8px;
+    font-size:14px;
+}
+
+.sidebar a:hover{
+    background:rgba(255,255,255,0.08);
+    color:white;
+}
+
+/* MAIN */
+.container{
+    margin-left:250px;
+    margin-top:80px;
+    padding:24px;
+}
+
+/* HEADER */
+h2{
+    font-family:'Playfair Display', serif;
+    color:var(--blue-900);
+    margin-bottom:6px;
+}
+
+.subtitle{
+    font-size:14px;
+    color:#666;
+    margin-bottom:20px;
+}
+
+/* GRID */
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:16px;
+}
+
+/* CARD */
+.card{
+    background:white;
+    border-radius:12px;
+    padding:18px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.06);
+    border-left:4px solid var(--blue-600);
+    transition:0.2s;
+}
+
+.card:hover{
+    transform:translateY(-2px);
+}
+
+.card h3{
+    font-size:16px;
+    color:var(--blue-900);
+    margin-bottom:8px;
+}
+
+.card p{
+    font-size:13px;
+    color:#555;
+    line-height:1.5;
+    margin-bottom:8px;
+}
+
+.meta{
+    font-size:12px;
+    color:#777;
+}
+
+/* TAG */
+.tag{
+    display:inline-block;
+    padding:4px 8px;
+    border-radius:20px;
+    font-size:11px;
+    background:#fff3cd;
+    color:#856404;
+    margin-bottom:8px;
+}
 </style>
 </head>
+
 <body>
 
-<div class="sidebar">
-    <h2 style="text-align:center; margin-bottom:20px;">Student Menu</h2>
-    <a href="dashboard.php">Dashboard</a>
-    <a href="profile.php">Profile</a>
-    <a href="scholarships.php">Available Scholarships</a>
-    <a href="my_applications.php">My Applications</a>
-    <a href="eligibility.php">Eligibility Criteria</a>
-    <a href="../auth/logout.php">Logout</a>
+<!-- TOPBAR -->
+<div class="topbar">
+    <h1>Eligibility Criteria</h1>
 </div>
 
-<header>
-    <h1>Eligibility Criteria</h1>
-</header>
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <a href="dashboard.php">Dashboard</a>
+    <a href="profile.php">Profile</a>
+    <a href="scholarships.php">Scholarships</a>
+    <a href="my_applications.php">My Applications</a>
+    <a href="eligibility.php">Eligibility</a>
+</div>
 
-<div class="main">
-    <h2>Scholarships & Eligibility</h2>
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th>Eligibility</th>
-            <th>Deadline</th>
-        </tr>
+<!-- MAIN -->
+<div class="container">
+
+    <h2>Scholarship Requirements</h2>
+    <p class="subtitle">Understand eligibility before applying to avoid rejection</p>
+
+    <div class="grid">
+
         <?php while($scholarship = mysqli_fetch_assoc($scholarships)){ ?>
-        <tr>
-            <td><?php echo $scholarship['id']; ?></td>
-            <td><?php echo $scholarship['title']; ?></td>
-            <td><?php echo $scholarship['eligibility']; ?></td>
-            <td><?php echo $scholarship['deadline']; ?></td>
-        </tr>
+
+        <div class="card">
+
+            <div class="tag">Scholarship</div>
+
+            <h3><?php echo htmlspecialchars($scholarship['title']); ?></h3>
+
+            <p>
+                <?php echo htmlspecialchars($scholarship['eligibility']); ?>
+            </p>
+
+            <div class="meta">
+                Deadline: <?php echo date("d M Y", strtotime($scholarship['deadline'])); ?>
+            </div>
+
+        </div>
+
         <?php } ?>
-    </table>
+
+    </div>
+
 </div>
 
 </body>
