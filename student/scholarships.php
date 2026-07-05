@@ -9,11 +9,23 @@ if(!isset($_SESSION['user_id']) || $_SESSION['role'] != 'student'){
 
 $student_id = $_SESSION['user_id'];
 
-$scholarships = mysqli_query($conn, "SELECT * FROM scholarships");
+/* ── Search query ── */
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$search_esc = mysqli_real_escape_string($conn, $search);
 
+/* ── All approved, open scholarships (with optional search filter) ── */
+$baseSql = "SELECT * FROM scholarships WHERE status='Approved' AND deadline >= CURDATE()";
+
+if ($search !== '') {
+    $baseSql .= " AND (title LIKE '%$search_esc%' OR description LIKE '%$search_esc%' OR eligibility LIKE '%$search_esc%')";
+}
+
+$baseSql .= " ORDER BY deadline ASC";
+$scholarships = mysqli_query($conn, $baseSql);
+
+/* ── Already applied ── */
 $applied = mysqli_query($conn, "SELECT scholarship_id FROM applications WHERE user_id='$student_id'");
 $applied_ids = [];
-
 while($row = mysqli_fetch_assoc($applied)){
     $applied_ids[] = $row['scholarship_id'];
 }
@@ -23,6 +35,7 @@ while($row = mysqli_fetch_assoc($applied)){
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Scholarships | SoundsOfScholars</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -32,8 +45,15 @@ while($row = mysqli_fetch_assoc($applied)){
     --blue-900:#042C53;
     --blue-800:#0C447C;
     --blue-600:#185FA5;
+    --blue-400:#378ADD;
     --blue-50:#E6F1FB;
     --amber-200:#EF9F27;
+    --teal-600:#0F6E56;
+    --teal-400:#1D9E75;
+    --teal-50:#E1F5EE;
+    --gray-900:#2C2C2A;
+    --gray-600:#5F5E5A;
+    --gray-200:#B4B2A9;
     --gray-100:#D3D1C7;
 }
 
@@ -126,7 +146,61 @@ while($row = mysqli_fetch_assoc($applied)){
 h2 {
     font-family:'Playfair Display', serif;
     color:var(--blue-900);
-    margin-bottom:20px;
+    margin-bottom:14px;
+}
+
+/* SEARCH BAR */
+.search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 28px;
+    max-width: 520px;
+}
+
+.search-bar input {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--gray-100);
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    background: white;
+}
+
+.search-bar input:focus {
+    outline: none;
+    border-color: var(--blue-400);
+}
+
+.search-bar button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    background: var(--blue-800);
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.search-bar button:hover { background: var(--blue-600); }
+
+.search-bar .clear-btn {
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--gray-100);
+    background: white;
+    color: var(--gray-600);
+    font-size: 14px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+}
+
+.search-result-note {
+    font-size: 13.5px;
+    color: var(--gray-600);
+    margin: -16px 0 20px;
 }
 
 /* GRID CARDS */
@@ -155,14 +229,28 @@ h2 {
 
 .card p {
     font-size:14px;
-    color:#666;
+    color:var(--gray-600);
     line-height:1.5;
 }
 
 /* META */
 .meta {
     font-size:13px;
-    color:#555;
+    color:var(--gray-600);
+}
+
+.criteria-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.criteria-chip {
+    font-size: 11.5px;
+    color: var(--gray-600);
+    background: var(--gray-100);
+    padding: 3px 9px;
+    border-radius: 12px;
 }
 
 /* BUTTONS */
@@ -188,7 +276,7 @@ h2 {
 
 .applied {
     background:#d6d6d6;
-    color:#666;
+    color:var(--gray-600);
     cursor:not-allowed;
 }
 
@@ -202,6 +290,22 @@ h2 {
     width:fit-content;
     background:var(--blue-50);
     color:var(--blue-600);
+}
+
+.empty-state {
+    background: white;
+    border-radius: 14px;
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--gray-200);
+    font-size: 14.5px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+}
+
+@media (max-width: 768px) {
+    .sidebar { width: 200px; }
+    .container { margin-left: 200px; padding: 16px; }
+    .search-bar { max-width: 100%; }
 }
 
 </style>
@@ -231,38 +335,76 @@ h2 {
 <!-- MAIN -->
 <div class="container">
 
-    <h2>Scholarships</h2>
+    <h2>Available Scholarships</h2>
 
-    <div class="grid">
+    <!-- SEARCH -->
+    <form class="search-bar" method="GET">
+        <input type="text" name="search" placeholder="Search by title, description, or eligibility..."
+               value="<?php echo htmlspecialchars($search); ?>">
+        <button type="submit">Search</button>
+        <?php if ($search !== ''): ?>
+            <a href="scholarships.php" class="clear-btn">Clear</a>
+        <?php endif; ?>
+    </form>
 
-        <?php while($s = mysqli_fetch_assoc($scholarships)){ ?>
+    <?php if ($search !== ''): ?>
+        <p class="search-result-note">
+            Showing results for "<?php echo htmlspecialchars($search); ?>" — <?php echo mysqli_num_rows($scholarships); ?> found.
+        </p>
+    <?php endif; ?>
 
-        <div class="card">
 
-            <h3><?php echo $s['title']; ?></h3>
+    <!-- ALL / SEARCH RESULTS -->
+    <h2><?php echo $search !== '' ? 'Search Results' : 'All Scholarships'; ?></h2>
 
-            <span class="badge">Deadline: <?php echo $s['deadline']; ?></span>
+    <?php if (mysqli_num_rows($scholarships) > 0): ?>
+        <div class="grid">
 
-            <p><?php echo $s['description']; ?></p>
+            <?php while($s = mysqli_fetch_assoc($scholarships)): ?>
 
-            <div class="meta">
-                <strong>Eligibility:</strong> <?php echo $s['eligibility']; ?>
+            <div class="card">
+
+                <h3><?php echo htmlspecialchars($s['title']); ?></h3>
+
+                <span class="badge">Deadline: <?php echo date("d M Y", strtotime($s['deadline'])); ?></span>
+
+                <p><?php echo htmlspecialchars($s['description']); ?></p>
+
+                <div class="meta">
+                    <strong>Eligibility:</strong> <?php echo htmlspecialchars($s['eligibility']); ?>
+                </div>
+
+                <div class="criteria-row">
+                    <?php if (!empty($s['min_kcse_grade'])): ?>
+                        <span class="criteria-chip">Min KCSE: <?php echo htmlspecialchars($s['min_kcse_grade']); ?></span>
+                    <?php endif; ?>
+                    <?php if (!empty($s['min_gpa'])): ?>
+                        <span class="criteria-chip">Min GPA: <?php echo htmlspecialchars($s['min_gpa']); ?></span>
+                    <?php endif; ?>
+                    <?php if (!empty($s['income_level']) && $s['income_level'] !== 'any'): ?>
+                        <span class="criteria-chip"><?php echo htmlspecialchars(ucfirst($s['income_level'])); ?> income</span>
+                    <?php endif; ?>
+                    <?php if (!empty($s['focus_areas'])): ?>
+                        <span class="criteria-chip"><?php echo htmlspecialchars(ucwords(str_replace(['_', ','], [' ', ', '], $s['focus_areas']))); ?></span>
+                    <?php endif; ?>
+                </div>
+
+                <?php if(in_array($s['id'], $applied_ids)): ?>
+                    <div class="btn applied">Already Applied</div>
+                <?php else: ?>
+                    <a class="btn apply" href="apply.php?scholarship_id=<?php echo $s['id']; ?>">Apply Now</a>
+                <?php endif; ?>
+
             </div>
 
-            <?php if(in_array($s['id'], $applied_ids)){ ?>
-                <div class="btn applied">Already Applied</div>
-            <?php } else { ?>
-                <a class="btn apply"
-                   href="apply.php?scholarship_id=<?php echo $s['id']; ?>">
-                   Apply Now
-                </a>
-            <?php } ?>
+            <?php endwhile; ?>
 
         </div>
-
-        <?php } ?>
-
-    </div>
+    <?php else: ?>
+        <div class="empty-state">
+            <?php echo $search !== '' ? 'No scholarships match your search.' : 'No scholarships are currently available.'; ?>
+        </div>
+    <?php endif; ?>
 
 </div>
 

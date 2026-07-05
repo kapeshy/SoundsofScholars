@@ -1,6 +1,7 @@
 <?php
 session_start();
 include("../config/db.php");
+include("../matching_helpers.php");
 
 if(!isset($_SESSION['user_id']) || $_SESSION['role'] != 'student'){
     header("Location: ../auth/login.php");
@@ -17,17 +18,32 @@ if(isset($_POST['update'])){
     $name = mysqli_real_escape_string($conn, $_POST['name']);
     $email = mysqli_real_escape_string($conn, $_POST['email']);
 
+    /* Matching attributes — used to power "Recommended for you" on scholarships.php */
+    $kcse_grade = in_array($_POST['kcse_grade'], kcse_grade_options(), true) ? $_POST['kcse_grade'] : null;
+    $kcse_grade_sql = $kcse_grade ? "'" . mysqli_real_escape_string($conn, $kcse_grade) . "'" : 'NULL';
+
+    $gpa = ($_POST['gpa'] !== '') ? floatval($_POST['gpa']) : null;
+    $gpa_sql = is_numeric($gpa) ? "'$gpa'" : 'NULL';
+
+    $income_level = mysqli_real_escape_string($conn, $_POST['income_level']);
+    $income_level_sql = ($income_level !== '') ? "'$income_level'" : 'NULL';
+
+    $activities = isset($_POST['activities']) ? activities_to_csv($_POST['activities']) : '';
+    $activities_sql = "'" . mysqli_real_escape_string($conn, $activities) . "'";
+
     if(!empty($_POST['password'])){
         $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
         mysqli_query($conn, "
             UPDATE users 
-            SET full_name='$name', email='$email', password='$password' 
+            SET full_name='$name', email='$email', password='$password',
+                kcse_grade=$kcse_grade_sql, gpa=$gpa_sql, income_level=$income_level_sql, activities=$activities_sql
             WHERE id='$student_id'
         ");
     } else {
         mysqli_query($conn, "
             UPDATE users 
-            SET full_name='$name', email='$email' 
+            SET full_name='$name', email='$email',
+                kcse_grade=$kcse_grade_sql, gpa=$gpa_sql, income_level=$income_level_sql, activities=$activities_sql
             WHERE id='$student_id'
         ");
     }
@@ -41,6 +57,7 @@ if(isset($_POST['update'])){
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Profile | SoundsOfScholars</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -50,9 +67,15 @@ if(isset($_POST['update'])){
     --blue-900:#042C53;
     --blue-800:#0C447C;
     --blue-600:#185FA5;
+    --blue-400:#378ADD;
     --blue-50:#E6F1FB;
     --amber-200:#EF9F27;
+    --teal-600:#0F6E56;
+    --teal-400:#1D9E75;
+    --teal-50:#E1F5EE;
     --gray-900:#2C2C2A;
+    --gray-600:#5F5E5A;
+    --gray-200:#B4B2A9;
     --gray-100:#D3D1C7;
 }
 
@@ -171,35 +194,110 @@ h2 {
 
 p.subtitle {
     font-size:14px;
-    color:#666;
+    color:var(--gray-600);
     margin-bottom:20px;
 }
 
 /* FORM */
-label {
-    font-size:13px;
-    color:#555;
-    display:block;
-    margin-bottom:6px;
-    margin-top:10px;
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
 }
 
-input {
+.section-divider {
+    margin: 26px 0 16px;
+    padding-top: 18px;
+    border-top: 1px solid var(--gray-100);
+}
+
+.section-divider h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--blue-900);
+    margin-bottom: 4px;
+}
+
+.section-divider p {
+    font-size: 12.5px;
+    color: var(--gray-200);
+    margin-bottom: 0;
+}
+
+label {
+    font-size:13px;
+    font-weight: 600;
+    color:var(--gray-900);
+    display:block;
+    margin-bottom:6px;
+    margin-top:14px;
+}
+
+input, select {
     width:100%;
     padding:12px;
     border:1px solid var(--gray-100);
     border-radius:8px;
     font-size:14px;
+    font-family: 'DM Sans', sans-serif;
+    background: white;
     outline:none;
 }
 
-input:focus {
-    border-color:var(--blue-600);
+input:focus, select:focus {
+    border-color:var(--blue-400);
+}
+
+.optional-note {
+    font-weight: 400;
+    color: var(--gray-200);
+    font-size: 12px;
+}
+
+.field-hint {
+    font-size: 12px;
+    color: var(--gray-200);
+    margin-top: 4px;
+    margin-bottom: 18px;
+    line-height: 1.5;
+}
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 400;
+    color: var(--gray-900);
+    background: var(--gray-50, #f4f6f8);
+    border: 1px solid var(--gray-100);
+    border-radius: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.checkbox-label:hover {
+    border-color: var(--blue-400);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    accent-color: var(--blue-600);
 }
 
 /* BUTTON */
 button {
-    margin-top:18px;
+    margin-top:22px;
     width:100%;
     padding:12px;
     border:none;
@@ -217,12 +315,21 @@ button:hover {
 
 /* MESSAGE */
 .message {
-    background:#e7f7ec;
-    color:#1e7e34;
-    padding:10px;
+    background: var(--teal-50);
+    color: var(--teal-600);
+    border: 1px solid var(--teal-400);
+    padding:10px 14px;
     border-radius:8px;
     margin-bottom:15px;
     font-size:14px;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .sidebar { width: 200px; }
+    .topbar { left: 0; }
+    .container { margin-left: 200px; padding: 16px; }
+    .form-row { grid-template-columns: 1fr; }
 }
 
 </style>
@@ -257,17 +364,56 @@ button:hover {
         <h2>Update Profile</h2>
         <p class="subtitle">Keep your personal information up to date</p>
 
-        <?php if($message) echo "<div class='message'>$message</div>"; ?>
+        <?php if($message) echo "<div class='message'>" . htmlspecialchars($message) . "</div>"; ?>
 
         <form method="POST">
             <label>Full Name</label>
-            <input type="text" name="name" value="<?php echo $student['full_name']; ?>" required>
+            <input type="text" name="name" value="<?php echo htmlspecialchars($student['full_name']); ?>" required>
 
             <label>Email</label>
-            <input type="email" name="email" value="<?php echo $student['email']; ?>" required>
+            <input type="email" name="email" value="<?php echo htmlspecialchars($student['email']); ?>" required>
 
             <label>Password (leave blank to keep current)</label>
             <input type="password" name="password">
+
+            <div class="section-divider">
+                <h3>Matching Information</h3>
+                <p>Used to show you "Recommended for you" scholarships you're more likely to qualify for.</p>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    <label>KCSE Grade <span class="optional-note">(if applicable)</span></label>
+                    <?php echo render_kcse_select('kcse_grade', $student['kcse_grade'] ?? ''); ?>
+                </div>
+
+                <div>
+                    <label>Current GPA <span class="optional-note">(university / A-levels / IB)</span></label>
+                    <input type="number" name="gpa" step="0.1" min="0" max="4"
+                        value="<?php echo htmlspecialchars($student['gpa'] ?? ''); ?>"
+                        placeholder="e.g. 3.7">
+                </div>
+            </div>
+
+            <label>Household Income Level</label>
+            <select name="income_level">
+                <option value="">Prefer not to say</option>
+                <?php
+                $current = $student['income_level'] ?? '';
+                $levels = ['low' => 'Low income', 'medium' => 'Medium income', 'high' => 'High income'];
+                foreach ($levels as $val => $label):
+                ?>
+                    <option value="<?php echo $val; ?>" <?php echo $current === $val ? 'selected' : ''; ?>>
+                        <?php echo $label; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+
+            <label>Activities &amp; Talents <span class="optional-note">(select all that apply)</span></label>
+            <div class="checkbox-grid">
+                <?php echo render_activity_checkboxes(activities_to_array($student['activities'] ?? '')); ?>
+            </div>
+            <p class="field-hint">These help match you to scholarships focused on specific talents or involvement — not just grades.</p>
 
             <button type="submit" name="update">Update Profile</button>
         </form>

@@ -660,6 +660,7 @@
             </div>
 
             <a href="about.php" class="nav-link">About</a>
+            <a href="contact.php" class="nav-link">Contact Us</a>
 
         </nav>
 

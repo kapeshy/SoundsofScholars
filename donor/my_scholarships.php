@@ -9,25 +9,35 @@ if(!isset($_SESSION['user_id']) || $_SESSION['role'] != 'donor'){
 
 $donor_id = $_SESSION['user_id'];
 
+/* Donor Info */
 $donor = mysqli_fetch_assoc(
     mysqli_query($conn, "SELECT * FROM users WHERE id='$donor_id'")
 );
 
-$totalScholarships = mysqli_fetch_assoc(
+/* Statistics */
+$total = mysqli_fetch_assoc(
     mysqli_query($conn, "SELECT COUNT(*) AS total FROM scholarships WHERE donor_id='$donor_id'")
 )['total'];
 
-$approvedScholarships = mysqli_fetch_assoc(
+$approved = mysqli_fetch_assoc(
     mysqli_query($conn, "SELECT COUNT(*) AS total FROM scholarships WHERE donor_id='$donor_id' AND status='Approved'")
 )['total'];
 
-$pendingScholarships = mysqli_fetch_assoc(
+$pending = mysqli_fetch_assoc(
     mysqli_query($conn, "SELECT COUNT(*) AS total FROM scholarships WHERE donor_id='$donor_id' AND status='Pending'")
 )['total'];
 
-$rejectedScholarships = mysqli_fetch_assoc(
+$rejected = mysqli_fetch_assoc(
     mysqli_query($conn, "SELECT COUNT(*) AS total FROM scholarships WHERE donor_id='$donor_id' AND status='Rejected'")
 )['total'];
+
+/* Scholarships */
+$scholarships = mysqli_query(
+    $conn,
+    "SELECT * FROM scholarships
+     WHERE donor_id='$donor_id'
+     ORDER BY id DESC"
+);
 ?>
 
 <!DOCTYPE html>
@@ -35,7 +45,7 @@ $rejectedScholarships = mysqli_fetch_assoc(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Donor Dashboard | SoundsOfScholars</title>
+<title>My Scholarships | SoundsOfScholars</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
@@ -156,11 +166,6 @@ header {
     border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-header strong {
-    font-weight: 600;
-    margin-left: 4px;
-}
-
 /* ─── MAIN ─── */
 .main {
     margin-left: 230px;
@@ -168,12 +173,23 @@ header strong {
     padding: 32px;
 }
 
-.main h2 {
+.page-title {
     font-family: 'Playfair Display', serif;
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 700;
     color: var(--blue-900);
-    margin-bottom: 26px;
+    margin-bottom: 24px;
+}
+
+.success-msg {
+    background: var(--teal-50);
+    border: 1px solid var(--teal-400);
+    color: var(--teal-600);
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 /* ─── CARDS ─── */
@@ -181,6 +197,7 @@ header strong {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 20px;
+    margin-bottom: 30px;
 }
 
 .card {
@@ -206,108 +223,97 @@ header strong {
     font-size: 13.5px;
     font-weight: 500;
     letter-spacing: 0.02em;
+    margin-bottom: 10px;
 }
 
 .card p {
-    margin-top: 10px;
     font-family: 'Playfair Display', serif;
-    font-size: 34px;
+    font-size: 32px;
     font-weight: 700;
     color: var(--blue-900);
 }
 
-/* ─── CTA ─── */
-.cta {
-    margin-top: 28px;
-    background: linear-gradient(135deg, var(--blue-900) 0%, var(--blue-800) 60%, #1a5e8c 100%);
-    color: white;
-    padding: 28px 30px;
-    border-radius: 14px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-
-.cta h2 {
-    font-family: 'Playfair Display', serif;
-    color: white;
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 6px;
-}
-
-.cta p {
-    color: rgba(255,255,255,0.75);
-    font-size: 14px;
-}
-
-.cta a {
-    background: var(--amber-200);
-    color: var(--blue-900);
-    text-decoration: none;
-    padding: 12px 22px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 14.5px;
-    white-space: nowrap;
-    transition: background 0.2s, transform 0.15s;
-}
-
-.cta a:hover {
-    background: #f7b224;
-    transform: translateY(-1px);
-}
-
-/* ─── QUICK ACTIONS ─── */
-.quick-actions {
-    margin-top: 28px;
+/* ─── TABLE ─── */
+.table-box {
     background: white;
-    padding: 26px 28px;
     border-radius: 14px;
+    overflow: hidden;
     box-shadow: 0 8px 24px rgba(4,44,83,0.06);
 }
 
-.quick-actions h3 {
-    font-family: 'Playfair Display', serif;
-    color: var(--blue-900);
-    font-size: 17px;
-    font-weight: 700;
-    margin-bottom: 16px;
+table {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-.action-links {
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
-}
-
-.action-links a {
-    text-decoration: none;
-    padding: 12px 20px;
-    border-radius: 8px;
+th {
+    background: var(--blue-900);
     color: white;
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 13px;
     font-weight: 600;
-    font-size: 14px;
-    transition: background 0.2s, transform 0.15s;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 
-.btn-primary { background: var(--blue-600); }
-.btn-primary:hover { background: var(--blue-800); transform: translateY(-1px); }
+td {
+    padding: 16px;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 14.5px;
+    color: var(--gray-900);
+}
 
-.btn-warning { background: var(--amber-200); color: var(--blue-900); }
-.btn-warning:hover { background: #f7b224; transform: translateY(-1px); }
+tr:last-child td { border-bottom: none; }
+
+tbody tr {
+    transition: background 0.15s;
+}
+
+tbody tr:hover {
+    background: var(--blue-50);
+}
+
+/* ─── STATUS BADGES ─── */
+.badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    display: inline-block;
+}
+
+.badge.approved { background: var(--teal-400); }
+.badge.pending  { background: var(--amber-200); color: var(--blue-900); }
+.badge.rejected { background: #D85A30; }
+
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--gray-200);
+    font-size: 14.5px;
+}
+
+.view-link {
+    font-size: 13.5px;
+    color: var(--blue-600);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.view-link:hover { text-decoration: underline; }
 
 @media (max-width: 768px) {
     .sidebar { width: 200px; }
     header { left: 200px; }
     .main { margin-left: 200px; padding: 20px; }
-    .cta { flex-direction: column; align-items: flex-start; }
+    .table-box { overflow-x: auto; }
+    table { min-width: 600px; }
 }
 </style>
 </head>
-
 <body>
 
 <!-- SIDEBAR -->
@@ -318,57 +324,125 @@ header strong {
     </div>
 
     <nav>
-        <a href="dashboard.php" class="active">Dashboard</a>
+        <a href="dashboard.php">Dashboard</a>
         <a href="create_scholarship.php">Create Scholarship</a>
-        <a href="my_scholarships.php">My Scholarships</a>
-        <a href="view_applicants.php" class="active">Beneficiaries</a>
+        <a href="my_scholarships.php" class="active">My Scholarships</a>
+        <a href="view_applicants.php">View Applicants</a>
         <a href="../auth/logout.php" class="logout-link">Logout</a>
     </nav>
 </div>
 
 <!-- HEADER -->
 <header>
-    Welcome, <strong><?php echo htmlspecialchars($donor['full_name']); ?></strong>
+    My Scholarships
 </header>
 
-<!-- MAIN -->
 <div class="main">
 
-    <h2>Dashboard Overview</h2>
+    <h2 class="page-title">
+        Scholarships Created by <?php echo htmlspecialchars($donor['full_name']); ?>
+    </h2>
 
+    <?php if (isset($_GET['deleted'])): ?>
+        <div class="success-msg">Scholarship deleted successfully.</div>
+    <?php endif; ?>
+
+    <!-- STATISTICS -->
     <div class="cards">
 
         <div class="card">
             <h3>Total Scholarships</h3>
-            <p><?php echo $totalScholarships; ?></p>
+            <p><?php echo $total; ?></p>
         </div>
 
         <div class="card approved">
-            <h3>Approved Scholarships</h3>
-            <p><?php echo $approvedScholarships; ?></p>
+            <h3>Approved</h3>
+            <p><?php echo $approved; ?></p>
         </div>
 
         <div class="card pending">
-            <h3>Pending Scholarships</h3>
-            <p><?php echo $pendingScholarships; ?></p>
+            <h3>Pending</h3>
+            <p><?php echo $pending; ?></p>
         </div>
 
         <div class="card rejected">
-            <h3>Rejected Scholarships</h3>
-            <p><?php echo $rejectedScholarships; ?></p>
+            <h3>Rejected</h3>
+            <p><?php echo $rejected; ?></p>
         </div>
 
     </div>
 
-    <div class="cta">
-        <div>
-            <h2>Support Education</h2>
-            <p>Create scholarships and help students achieve their dreams.</p>
-        </div>
+    <!-- TABLE -->
+    <div class="table-box">
 
-        <a href="create_scholarship.php">+ Create Scholarship</a>
+        <table>
+
+            <tr>
+                <th>Title</th>
+                <th>Eligibility</th>
+                <th>Deadline</th>
+                <th>Status</th>
+                <th>Applicants</th>
+                <th>Actions</th>
+            </tr>
+
+            <?php if(mysqli_num_rows($scholarships) > 0): ?>
+
+                <?php while($sch = mysqli_fetch_assoc($scholarships)): ?>
+
+                <tr>
+                    <td>
+                        <?php echo htmlspecialchars($sch['title']); ?>
+                    </td>
+
+                    <td>
+                        <?php echo htmlspecialchars($sch['eligibility']); ?>
+                    </td>
+
+                    <td>
+                        <?php echo date("d M Y", strtotime($sch['deadline'])); ?>
+                    </td>
+
+                    <td>
+
+                        <?php
+                        $status = strtolower($sch['status']);
+                        ?>
+
+                        <span class="badge <?php echo $status; ?>">
+                            <?php echo ucfirst($sch['status']); ?>
+                        </span>
+
+                    </td>
+
+                    <td>
+                        <a href="view_applicants.php?scholarship_id=<?php echo $sch['id']; ?>" class="view-link">
+                            View applicants
+                        </a>
+                    </td>
+
+                    <td>
+                        <a href="edit_scholarship.php?id=<?php echo $sch['id']; ?>" class="view-link">
+                            Edit
+                        </a>
+                    </td>
+                </tr>
+
+                <?php endwhile; ?>
+
+            <?php else: ?>
+
+                <tr>
+                    <td colspan="6" class="empty">
+                        You have not created any scholarships yet.
+                    </td>
+                </tr>
+
+            <?php endif; ?>
+
+        </table>
+
     </div>
-
 
 </div>
 

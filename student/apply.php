@@ -278,7 +278,7 @@ button:hover{
                 <label>Academic Score / GPA</label>
                 <input type="text" name="gpa" required>
 
-                <label>Upload Supporting Document</label>
+                <label>Upload Supporting Document(Indicate the reason why you really need the Scholarship)</label>
                 <input type="file" name="transcript" accept=".pdf,.doc,.docx,.jpg,.png" required>
 
                 <button name="apply">Submit Application</button>
